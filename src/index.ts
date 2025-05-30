@@ -461,6 +461,57 @@ server.tool(
   }
 );
 
+// ============= SharePoint Site Pages Tools =============
+
+server.tool(
+  "getSitePages",
+  "Gets SharePoint site pages with full content including canvasLayout. Use without pageId to list all pages, or with pageId to get a specific page with its content structure.",
+  {
+    siteId: z.string().describe("ID of the SharePoint site"),
+    pageId: z.string().optional().describe("ID of specific page to retrieve (optional - omit to list all pages)"),
+    top: z.number().int().positive().optional().describe("Maximum number of pages to return when listing all pages")
+  },
+  async (params) => {
+    try {
+      if (params.pageId) {
+        // Get specific page with content
+        const page = await graphClient.getSitePage(params.siteId, params.pageId);
+        
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(page, null, 2)
+            }
+          ]
+        };
+      } else {
+        // List all pages with content
+        const pages = await graphClient.listSitePages(params.siteId, params.top);
+        
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(pages, null, 2)
+            }
+          ]
+        };
+      }
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error getting site pages: ${error instanceof Error ? error.message : String(error)}`
+          }
+        ],
+        isError: true
+      };
+    }
+  }
+);
+
 // ============= SharePoint Search Tools =============
 
 server.tool(

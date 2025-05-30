@@ -145,3 +145,72 @@ export const SharePointSearchResultSchema = z.object({
 });
 
 export type SharePointSearchResult = z.infer<typeof SharePointSearchResultSchema>;
+
+// Schema for SharePoint Site Page Canvas Layout
+export const WebPartSchema = z.object({
+  "@odata.type": z.string().optional(),
+  id: z.string().optional(),
+  innerHtml: z.string().optional()
+});
+
+export const ColumnSchema = z.object({
+  id: z.string().optional(),
+  width: z.number().optional(),
+  webparts: z.array(WebPartSchema).optional()
+});
+
+export const HorizontalSectionSchema = z.object({
+  layout: z.string().optional(),
+  id: z.string().optional(),
+  emphasis: z.string().optional(),
+  columns: z.array(ColumnSchema).optional()
+});
+
+export const CanvasLayoutSchema = z.object({
+  horizontalSections: z.array(HorizontalSectionSchema).optional()
+});
+
+// Schema for SharePoint Site Page
+export const SharePointSitePageSchema = z.object({
+  id: z.string(),
+  name: z.string().optional(),
+  title: z.string().optional(),
+  description: z.string().optional(),
+  webUrl: z.string().optional(),
+  createdDateTime: z.string().optional(),
+  lastModifiedDateTime: z.string().optional(),
+  eTag: z.string().optional(),
+  pageLayout: z.enum(["microsoftReserved", "article", "home", "unknownFutureValue"]).optional(),
+  promotionKind: z.enum(["microsoftReserved", "page", "newsPost", "unknownFutureValue"]).optional(),
+  showComments: z.boolean().optional(),
+  showRecommendedPages: z.boolean().optional(),
+  thumbnailWebUrl: z.string().optional(),
+  createdBy: z.object({
+    user: z.object({
+      displayName: z.string().optional(),
+      email: z.string().optional()
+    }).optional()
+  }).optional(),
+  lastModifiedBy: z.object({
+    user: z.object({
+      displayName: z.string().optional(),
+      email: z.string().optional()
+    }).optional()
+  }).optional(),
+  publishingState: z.object({
+    level: z.string().optional(),
+    versionId: z.string().optional()
+  }).optional(),
+  contentType: z.object({
+    id: z.string().optional(),
+    name: z.string().optional()
+  }).optional(),
+  parentReference: z.object({
+    listId: z.string().optional(),
+    siteId: z.string().optional()
+  }).optional(),
+  reactions: z.object({}).optional(),
+  canvasLayout: CanvasLayoutSchema.optional()
+});
+
+export type SharePointSitePage = z.infer<typeof SharePointSitePageSchema>;

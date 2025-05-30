@@ -6,6 +6,7 @@ import {
   SharePointList,
   SharePointDrive,
   SharePointDriveItem,
+  SharePointSitePage,
   ListSitesQuery,
   ListDriveItemsQuery,
   GetDriveItemContentParams,
@@ -322,6 +323,43 @@ export class GraphClient {
     await this.ensureAuthenticated();
 
     const response = await this.client.api('/sites/root').get();
+    return response;
+  }
+
+  // ============= SharePoint Site Pages Methods =============
+
+  /**
+   * List all site pages in a SharePoint site with canvasLayout included
+   */
+  async listSitePages(siteId: string, top?: number): Promise<SharePointSitePage[]> {
+    await this.ensureAuthenticated();
+
+    let endpoint = `/sites/${siteId}/pages`;
+    const queryParams = new URLSearchParams();
+    
+    // Always expand canvasLayout to get page content
+    queryParams.append('$expand', 'canvasLayout');
+    
+    if (top) {
+      queryParams.append('$top', top.toString());
+    }
+
+    endpoint += `?${queryParams.toString()}`;
+
+    const response = await this.client.api(endpoint).get();
+    return response.value;
+  }
+
+  /**
+   * Get a specific site page by ID with canvasLayout included
+   */
+  async getSitePage(siteId: string, pageId: string): Promise<SharePointSitePage> {
+    await this.ensureAuthenticated();
+
+    // Always expand canvasLayout to get page content
+    const endpoint = `/sites/${siteId}/pages/${pageId}/microsoft.graph.sitePage?$expand=canvasLayout`;
+
+    const response = await this.client.api(endpoint).get();
     return response;
   }
 }
