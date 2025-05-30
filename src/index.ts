@@ -6,7 +6,6 @@ import { z } from "zod";
 import { 
   ListSitesQuerySchema,
   ListDriveItemsQuerySchema,
-  GetDriveItemContentSchema,
   SearchSharePointSchema
 } from "./types.js";
 import { graphClient } from "./graphClient.js";
@@ -427,39 +426,6 @@ server.tool(
   }
 );
 
-server.tool(
-  "getDriveItemContent",
-  "Downloads the actual content of a file from SharePoint. Returns text files as UTF-8 text, binary files as base64. Use this after finding the file with listDriveItems. Requires siteId and itemId.",
-  GetDriveItemContentSchema.shape,
-  async (params) => {
-    try {
-      const result = await graphClient.getDriveItemContent(params);
-      
-      const responseText = result.isBase64 
-        ? `Binary file content (base64 encoded, ${Math.round(result.content.length * 0.75)} bytes, MIME: ${result.mimeType})\n\n${result.content}`
-        : `Text file content (MIME: ${result.mimeType}):\n\n${result.content}`;
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: responseText
-          }
-        ]
-      };
-    } catch (error) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Error getting drive item content: ${error instanceof Error ? error.message : String(error)}`
-          }
-        ],
-        isError: true
-      };
-    }
-  }
-);
 
 // ============= SharePoint Site Pages Tools =============
 
@@ -817,6 +783,67 @@ server.resource(
           {
             uri: uri.toString(),
             text: `Error performing search: ${error instanceof Error ? error.message : String(error)}`,
+            mimeType: "text/plain"
+          }
+        ]
+      };
+    }
+  }
+);
+
+// Dynamic resource: File content
+server.resource(
+  "sharepoint://sites/{siteId}/items/{itemId}/content",
+  "Get the actual content of a specific file from SharePoint. Replace {siteId} with site ID and {itemId} with file item ID. Returns text files as UTF-8 text, binary files (like Excel, images) as base64 with proper MIME type. Example: sharepoint://sites/mysite.sharepoint.com,abc123/items/01ABCDEF123456789/content",
+  async (uri) => {
+    try {
+      const uriStr = uri.toString();
+      const pathMatch = uriStr.match(/sharepoint:\/\/sites\/([^/]+)\/items\/([^/]+)\/content/);
+      
+      if (!pathMatch) {
+        throw new Error("Invalid file content URI format");
+      }
+      
+      const siteId = pathMatch[1];
+      const itemId = pathMatch[2];
+      
+      const result = await graphClient.getDriveItemContent({
+        siteId,
+        itemId
+      });
+      
+      // Determine MIME type for response
+      const mimeType = result.mimeType || (result.isBase64 ? "application/octet-stream" : "text/plain");
+      
+      if (result.isBase64) {
+        // For binary files (Excel, images, etc.), return as base64 with proper MIME type
+        return {
+          contents: [
+            {
+              uri: uri.toString(),
+              text: result.content,
+              mimeType: mimeType
+            }
+          ]
+        };
+      } else {
+        // For text files, return as text
+        return {
+          contents: [
+            {
+              uri: uri.toString(),
+              text: result.content,
+              mimeType: mimeType
+            }
+          ]
+        };
+      }
+    } catch (error) {
+      return {
+        contents: [
+          {
+            uri: uri.toString(),
+            text: `Error accessing file content: ${error instanceof Error ? error.message : String(error)}`,
             mimeType: "text/plain"
           }
         ]
